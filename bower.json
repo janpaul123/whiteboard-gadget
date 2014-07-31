@@ -1,0 +1,10 @@
+{
+  "name": "whiteboard-gadget",
+  "private": true,
+  "dependencies": {
+    "underscore": "~1.6.0",
+    "jquery": "~2.1.1",
+    "versal-player-api": "~0.3.1",
+    "versal-gadget-theme": "~0.2.0"
+  }
+}

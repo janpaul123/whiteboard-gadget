@@ -1,63 +1,49 @@
-define(
-  ["cdn.underscore", "cdn.jquery", "text!whiteboard.html"], 
-  function(_, $, tpl){
+var player = new VersalPlayerAPI();
 
-    var Gadget = function(options) {
-      this.$el = options.$el;
-      this.player = options.player;
-      this.config = options.config;
-      this.userState = options.userState;
+    var Gadget = function() {
       this.Playbacks = [];
       this.Texts = [];
-      
-      options.propertySheetSchema.set('Learner canvas privileges', { type: "Checkboxes", 
-        options: 
+      this.attributes = {};
+
+      player.setPropertySheetAttributes({priveleges: { type: "Checkboxes",
+        options:
         [
-          {val: "can_draw", label: "Can draw"}, 
+          {val: "can_draw", label: "Can draw"},
           {val: "can_record", label: "Can record"}
         ]
-      });
+      }});
 
-      this.update(options.config);
+      player.on('editableChanged', this.toggleEdit.bind(this));
+      player.on('attributesChanged', this.attributesChanged.bind(this));
 
-      this.player.on('toggleEdit', this.toggleEdit, this);
-      this.config.on('change:Learner canvas privileges', this.update, this);
-      this.player.on('domReady', this.render, this);
+      player.startListening();
     };
 
-    Gadget.prototype.update = function() {
-      this.learner = this.config.get('Learner canvas privileges');
-      if(!this.learner) this.learner = [];
-      this.render(true);
+    Gadget.prototype.attributesChanged = function(attributes) {
+      this.attributes = attributes;
+      this.render();
     };
 
-    Gadget.prototype.render = function(editable) {
-      
+    Gadget.prototype.render = function() {
       var self = this;
-      var $el = this.$el;
-      var existingSlides = this.config.get('slides');
+      var $el = $('body');
+      var existingSlides = this.attributes.slides || [];
+
       var learnerObject = {
         canDraw: false,
         canRecord: false
       };
 
-      for(i=0; i<this.learner.length; i++) {
-
-        if(this.learner[i]=="can_draw") learnerObject.canDraw = true;
-        if(this.learner[i]=="can_record") learnerObject.canRecord = true;
+      for(i=0; i<(this.attributes.priveleges || []).length; i++) {
+        if(this.attributes.priveleges[i]=="can_draw") learnerObject.canDraw = true;
+        if(this.attributes.priveleges[i]=="can_record") learnerObject.canRecord = true;
       }
 
-      // Initialize template
-      this.template = _.template(tpl, {
-        editable: editable,
-        learner: learnerObject
-      });
-
-      // Load template
-      $el.html(this.template);
+      $('.js-can-draw').toggle(self.editable || learnerObject.canDraw);
+      $('.js-can-record').toggle(self.editable || learnerObject.canRecord);
 
       // Initialize first slide's canvas
-      self.canvas($el.find('.slide.current'), (editable || (!editable && learnerObject.canDraw)));
+      self.canvas($el.find('.slide.current'), (self.editable || (!self.editable && learnerObject.canDraw)));
 
       // Load any saved slides
       if(existingSlides && existingSlides.length) {
@@ -78,7 +64,7 @@ define(
 
               $slide = $el.find('.slide.current').clone();
 
-              self.canvas($slide, (editable || (!editable && learnerObject.canDraw)));
+              self.canvas($slide, (self.editable || (!self.editable && learnerObject.canDraw)));
 
               $el.find('.slides').append( $slide ).css('width', $el.find('.slides').width()+704);
 
@@ -88,7 +74,7 @@ define(
 
               $slide.find('.btn.play').addClass('disabled');
 
-              if(editable) {
+              if(self.editable) {
                 $($el.find('.slides .slide')[i-1]).find('.remove-slide').show();
 
                 if(existingSlides[i+1]) {
@@ -113,7 +99,7 @@ define(
             }
 
             if(existingSlides[i].playback) {
-                
+
               $slide.find('.btn.play').removeClass('disabled');
 
               self.Playbacks[i+1] = existingSlides[i].playback;
@@ -131,7 +117,7 @@ define(
       // Adding a slide
       $el.on("click", '.add.new-slide', function(e) {
 
-        var $old = $el.find('.slide.current');        
+        var $old = $el.find('.slide.current');
         var $new = $old.clone();
         var current = $el.find('.slides .slide').length+1;
 
@@ -152,7 +138,7 @@ define(
         $old.find('.add.new-slide').hide();
         $old.find('.remove-slide').show();
 
-        self.canvas($el.find('.slide.current'), (editable || (!editable && learnerObject.canDraw)));
+        self.canvas($el.find('.slide.current'), (self.editable || (!self.editable && learnerObject.canDraw)));
 
         e.stopImmediatePropagation();
       })
@@ -211,17 +197,19 @@ define(
 
         e.stopImmediatePropagation();
       });
+
+      player.setHeight($('body').outerHeight());
     };
 
-    Gadget.prototype.toggleEdit = function(editable) {
+    Gadget.prototype.toggleEdit = function(data) {
 
       var self = this;
 
-      if(!editable) {
-      
+      if(!data.editable) {
+
         var slides = [];
 
-        this.$el.find('.slides .slide').each(function() {
+        $('.slides .slide').each(function() {
 
           var canvas = $(this).find('.sketchpad')[0];
           var ctx = canvas.getContext('2d');
@@ -235,14 +223,14 @@ define(
           slides.push({imageData: imageData, playback: playback, texts: texts});
         });
 
-        this.config.set('slides', slides);
-        this.config.save();
+        player.setAttributes({slides: slides});
       }
 
-      this.render(editable);
+      this.editable = data.editable
+      this.render();
     };
 
-    Gadget.prototype.canvas = function($el, editable){
+    Gadget.prototype.canvas = function($el){
 
       var self = this;
 
@@ -282,8 +270,8 @@ define(
       var lastFill, Erasing = false;
 
       canvas.onmousedown = function(event) {
-        
-        if(Playing || !editable) return;
+
+        if(Playing || !self.editable) return;
 
         isDrawing = true;
 
@@ -306,7 +294,7 @@ define(
         }
 
         if(CanvasRecording) {
-          
+
           if(WhiteboardPlayback.length && WhiteboardPlayback[0].type=="pause" && !WhiteboardPlayback[0].end_time) {
             WhiteboardPlayback[0].end_time = Date.now();
           }
@@ -319,7 +307,7 @@ define(
       };
 
       canvas.onmousemove = function(event) {
-        if (!isDrawing || Playing || !editable) return;
+        if (!isDrawing || Playing || !self.editable) return;
 
         var cx,cy;
 
@@ -340,10 +328,10 @@ define(
 
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.drawImage(memCanvas, 0, 0);
-        
+
         var p1 = points[0];
         var p2 = points[1];
-        
+
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
 
@@ -377,7 +365,7 @@ define(
       function Draw(p1, p2, p3, stroke, delay) {
 
         window.setTimeout(function() {
-          
+
           ctx.lineWidth = stroke.w;
           ctx.fillStyle = stroke.fill;
           ctx.strokeStyle = stroke.fill;
@@ -407,7 +395,7 @@ define(
         while(wi--) {
 
           var duration = obj[wi].end_time - obj[wi].start_time;
-          
+
           if(obj[wi].type=="pause") {
 
             var newPlayback = obj.slice(0, wi);
@@ -421,9 +409,9 @@ define(
             }, duration+drawtime);
             break;
           }
-          
+
           if(obj[wi].type=="draw") {
-            
+
             for (var i = 1, len = obj[wi].points.length; i < len; i++) {
               Draw(obj[wi].points[i-1], obj[wi].points[i], obj[wi].points[i+1], obj[wi].stroke, (duration/obj[wi].points.length)*i);
             }
@@ -470,13 +458,13 @@ define(
           }
         );
       }
-        
+
       // button actions
       $el.on("click", '.btn.record', function(e) {
 
         if(!$(this).hasClass('disabled')) {
           if(CanvasRecording) {
-           
+
             CanvasRecording = false;
             $(this).removeClass('recording');
 
@@ -489,7 +477,7 @@ define(
             $el.find('.btn.clear').removeClass('disabled');
 
           } else {
-           
+
             CanvasRecording = true;
             $(this).addClass('recording');
             $el.find('.btn.play').addClass('disabled');
@@ -500,13 +488,13 @@ define(
         e.stopImmediatePropagation();
       })
       .on("click", '.btn.play', function(e) {
-        
+
         if(!$(this).hasClass('disabled')) {
-          
+
           Playing = true;
 
           canvas.width = canvas.width;
-          
+
           Playback(self.Playbacks[$el.data("slide")].playback);
 
           $el.find('.btn.record').addClass('disabled');
@@ -516,7 +504,7 @@ define(
         e.stopImmediatePropagation();
       })
       .on("click", '.btn.clear', function() {
-        
+
         if(!$(this).hasClass('disabled')) {
 
           canvas.width = canvas.width;
@@ -532,7 +520,7 @@ define(
         $(this).addClass('selected');
 
         lineW = $el.find('.selected .circle').data('width');
-        
+
         if(!Erasing) {
           fillC = $el.find('.selected .color').data('color');
         } else {
@@ -545,7 +533,7 @@ define(
         if($(this).closest('li').hasClass('selected')) {
 
           $(this).closest('li').removeClass('selected');
-          
+
           fillC = lastFill;
           Erasing = false;
 
@@ -597,5 +585,4 @@ define(
       });
     };
 
-    return Gadget;
-});
+new Gadget();
