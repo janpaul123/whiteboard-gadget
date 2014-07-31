@@ -1,0 +1,58 @@
+<link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+
+<div class="content">
+
+  <div class="slides clearfix">
+    <div class="slide current" data-slide="1">
+
+      <div class="menu clearfix">
+        <nav>
+          <div class="col col-4">
+            <% if (editable || (!editable && learner.canRecord)) { %><li><button class="btn btn-default record" type="button"><i class="fa fa-circle"></i> Record</button></li><% } %>
+            <li><button class="btn btn-default play disabled" type="button"><i class="fa fa-play"></i> Play</button></li>
+          </div>
+          <div class="col col-4 text-center">Slide <span class="text current-slide">1</span> of <span class="text total-slides">1</span></div>
+          <div class="col col-4">
+            <% if (editable || (!editable && learner.canDraw)) { %><li class="right"><button class="btn btn-default clear" type="button">Clear Canvas</button></li><% } %>
+          </div>
+        </nav>
+      </div>
+
+      <div class="canvas">
+        <canvas class="sketchpad"></canvas>
+        <div class="controls clearfix">
+          <% if (editable || (!editable && learner.canDraw)) { %>
+          <div class="grouped">
+            <li><span class="circle small" data-width="6"></span></li>
+            <li class="selected"><span class="circle medium" data-width="9"></span></li>
+            <li><span class="circle large" data-width="13"></span></li>
+          </div>
+          <div class="grouped">
+            <li class="selected"><span class="color black" data-color="#444"></span></li>
+            <li><span class="color red" data-color="#e74c3c"></span></li>
+            <li><span class="color orange" data-color="#e67e22"></span></li>
+            <li><span class="color yellow" data-color="#f1c40f"></span></li>
+            <li><span class="color green" data-color="#2ecc71"></span></li>
+            <li><span class="color blue" data-color="#3498db"></span></li>
+          </div>
+          <li><span class="icon erase"><i class="fa fa-eraser"></i></span></li>
+          <li><span class="icon add image"><i class="fa fa-picture-o"></i></span></li>
+          <li><span class="icon add text"><i class="fa fa-font"></i></span></li>
+          <% } %>
+
+          <% if (editable || (!editable && learner.canSlides)) { %><li class="right"><span class="icon remove-slide"><i class="fa fa-minus"></i></span><span class="icon add new-slide"><i class="fa fa-plus"></i></span></li><% } %>
+          <li class="right"><span class="icon traverse forward disabled"><i class="fa fa-chevron-right"></i></span></li>
+          <li class="right"><span class="icon traverse backward disabled"><i class="fa fa-chevron-left"></i></span></li>
+        </div>
+        <div class="sub-controls clearfix">
+          <div class="text-controls">
+            <li class="large"><input type="text" class="text-text"></li>
+            <li class="medium">x <input type="text" class="text-pos x"></li>
+            <li class="medium">y <input type="text" class="text-pos y"></li>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
